@@ -4,15 +4,44 @@ type: docker
 name: default
 
 steps:
-- name: backend
-  image: alpine
-  commands:
-  - docker build
+  angular-tests:
+    group: tests
+    image: node:10.1.0-wheezy
+    environment:
+        - NODE_ENV=production
+    commands:
+        - cd tests/karma/
+        - npm install
+        - npm install -g karma-cli
+        - npm run test:ci
+    when:
+      event:
+        exclude: pull_request
 
-- name: frontend
-  image: node
-  commands:
-  - npm install
-  - npm run test
-
-...
+  publish-eu-west-1:
+    group: publish
+    image: ${ACCOUNT_ID}.dkr.ecr.eu-west-1.amazonaws.com/drone-plugins/drone-ecr
+    repo: devops-test
+    tag:
+    - 3.0.${DRONE_BUILD_NUMBER}
+    - ${DRONE_BRANCH}
+    dockerfile: Dockerfile
+    region: eu-west-1
+    create_repository: True
+    when:
+      event:
+        exclude: pull_request
+  
+  publish-eu-central-1:
+  group: publish
+  image: ${ACCOUNT_ID}.dkr.ecr.eu-west-1.amazonaws.com/drone-plugins/drone-ecr
+  repo: devops-test
+  tag:
+  - 3.0.${DRONE_BUILD_NUMBER}
+  - ${DRONE_BRANCH}
+  dockerfile: Dockerfile
+  region: eu-central-1
+  create_repository: True
+  when:
+    event:
+      exclude: pull_request
